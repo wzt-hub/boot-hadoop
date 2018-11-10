@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:hdp="http://www.springframework.org/schema/hadoop"
+        xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/hadoop
+        http://www.springframework.org/schema/hadoop/spring-hadoop.xsd">
+
+    <!--配置Hadoop -->
+    <hdp:configuration id="hadoopConfiguration">
+        fs.defaultFS=hdfs://bigdata02:8020
+        mapreduce.framework.name=yarn
+        dfs.replication=1
+        yarn.resourcemanager.hostname=bigdata02
+        mapreduce.app-submission.cross-platform=true
+        mapred.jar=E:\\Users\\Administrator\\IdeaProjects\\spring-hadoop\\target\\spring-hadoop-1.0-SNAPSHOT.jar
+    </hdp:configuration>
+
+    <hdp:file-system id="fileSystem" configuration-ref="hadoopConfiguration" user="hadoop"/>
+
+    <!--配置HBase-->
+    <hdp:hbase-configuration id="hbaseConfiguration" zk-quorum="bigdata01,bigdata02,bigdata03" zk-port="2181"/>
+
+    <!--构造工具类注入HBase配置对象-->
+    <bean id="hBaseConnUtil" class="com.bigdata.hadoop.spring.hbase.utils.HBaseConnUtil">
+        <constructor-arg ref="hbaseConfiguration" type="org.apache.hadoop.conf.Configuration"/>
+    </bean>
+
+
+
+
+    <!--配置扫描包 -->
+    <context:component-scan base-package="com.bigdata.hadoop.spring"/>
+
+    <!-- define the job -->
+    <hdp:job id="jsonparse"
+             configuration-ref="hadoopConfiguration"
+             mapper="com.bigdata.hadoop.spring.mapreduce.map.JsonParseMapper"
+             number-reducers="0"
+             map-key="org.apache.hadoop.io.Text"
+             map-value="org.apache.hadoop.io.NullWritable"
+             input-path="hdfs://bigdata01:8020/QFIS/source/answer_paper"
+             output-path="hdfs://bigdata01:8020/QFIS/answer_paper/jsonparse/">
+    </hdp:job>
+
+    <bean id="runner"  class="org.springframework.data.hadoop.mapreduce.JobRunner"
+          p:jobs-ref="jsonparse"/>
+</beans>
